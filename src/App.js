@@ -63,7 +63,7 @@ class App extends Component {
           onPathDeleted={this.onPathDeleted}
           activeQuality={this.state.activeQuality}
         />
-        <MapToolbar onQualityChange={this.onQualityChange} activeQuality={this.state.activeQuality} />
+        <MapToolbar className="map-toolbar" onQualityChange={this.onQualityChange} activeQuality={this.state.activeQuality} />
       </div>
     );
   }
