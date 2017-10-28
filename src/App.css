@@ -16,6 +16,7 @@ h3 {
 .map {
   flex: 1 1 auto;
   width: 100%;
+  background: #dfdfdf;
 }
 
 .map-toolbar {
