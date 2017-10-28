@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import _ from 'lodash';
-import logo from './logo.svg';
 import './App.css';
 import MapToolbar from './MapToolbar';
 import Map from './Map';
