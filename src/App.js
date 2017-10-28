@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import _ from 'lodash';
 import logo from './logo.svg';
 import './App.css';
 import MapToolbar from './MapToolbar';
@@ -9,6 +10,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.onPathCreated = this.onPathCreated.bind(this);
+    this.onPathDeleted = this.onPathDeleted.bind(this);
     this.onQualityChange = this.onQualityChange.bind(this);
 
     let savedPaths;
@@ -37,6 +39,15 @@ class App extends Component {
     localStorage.setItem('paths', JSON.stringify(newPaths));
   }
 
+  onPathDeleted(path) {
+    const newPaths = _.filter(this.state.paths, statePath => path.id !== statePath.id);
+    this.setState({
+      paths: newPaths,
+    })
+
+    localStorage.setItem('paths', JSON.stringify(newPaths));
+  }
+
   onQualityChange(level) {
     console.log(level);
     this.setState({activeQuality: level});
@@ -49,6 +60,7 @@ class App extends Component {
         <Map
           paths={this.state.paths}
           onPathCreated={this.onPathCreated}
+          onPathDeleted={this.onPathDeleted}
           activeQuality={this.state.activeQuality}
         />
         <MapToolbar onQualityChange={this.onQualityChange} activeQuality={this.state.activeQuality} />

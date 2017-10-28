@@ -8,6 +8,7 @@ export default class Map extends Component {
 
     this.drawPath = this.drawPath.bind(this);
     this.onPolylineCreated = this.onPolylineCreated.bind(this);
+    this.registerPolylineEvents = this.registerPolylineEvents.bind(this);
     this.getPolylineOptions = this.getPolylineOptions.bind(this);
 
     this.polylines = {};
@@ -24,7 +25,7 @@ export default class Map extends Component {
     this.map = new window.google.maps.Map(this.container, mapConfig);
 
     paths.forEach(path => {
-      this.polylines[path.id] = this.drawPath(path);
+      this.drawPath(path);
     });
 
     const drawingOptions = {
@@ -52,6 +53,16 @@ export default class Map extends Component {
       if (this.polylines[path.id] === undefined) {
         this.drawPath(path);
       }
+    });
+
+    prevProps.paths.forEach(path => {
+      const matchingPath = this.props.paths.find(newPath => newPath.id === path.id);
+      if (matchingPath === undefined) {
+        const polyline = this.polylines[path.id];
+        polyline.onRightClick.remove();
+        polyline.polyline.setMap(null);
+        delete this.polylines[path.id];
+      }
     })
 
     if (prevProps.activeQuality !== this.props.activeQuality) {
@@ -71,6 +82,23 @@ export default class Map extends Component {
     };
     const prerenderedPolyline = new window.google.maps.Polyline({ ...drawOptions, path: latLngs });
     prerenderedPolyline.setMap(this.map);
+
+    this.polylines[path.id] = {
+      polyline: prerenderedPolyline,
+      ...this.registerPolylineEvents(prerenderedPolyline, path.id),
+    };
+    this.nextPolylineId = path.id + 1;
+  }
+
+  registerPolylineEvents(polyline, pathID) {
+    const onRightClick = (polyMouseEvent) => {
+      const path = this.props.paths.find(path => path.id === pathID)
+      this.props.onPathDeleted(path);
+    }
+
+    return {
+      onRightClick: window.google.maps.event.addListener(polyline, 'rightclick', onRightClick),
+    }
   }
 
   onPolylineCreated(polyline) {
@@ -82,7 +110,11 @@ export default class Map extends Component {
       points,
       quality: this.props.activeQuality,
     };
-    this.polylines[path.id] = polyline;
+
+    this.polylines[path.id] = {
+      polyline,
+      ...this.registerPolylineEvents(polyline, path.id),
+    };
 
     ++this.nextPolylineId;
     this.props.onPathCreated(path);
