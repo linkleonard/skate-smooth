@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { PathQuality } from './constants';
+import { PathQuality, millisecondsInDay } from './constants';
 
 
 export default class Map extends Component {
@@ -9,7 +9,6 @@ export default class Map extends Component {
     this.drawPath = this.drawPath.bind(this);
     this.onPolylineCreated = this.onPolylineCreated.bind(this);
     this.registerPolylineEvents = this.registerPolylineEvents.bind(this);
-    this.getPolylineOptions = this.getPolylineOptions.bind(this);
 
     this.polylines = {};
     this.map = null;
@@ -34,18 +33,12 @@ export default class Map extends Component {
       drawingControlOptions: {
         drawingModes: [window.google.maps.drawing.OverlayType.POLYLINE],
       },
-      polylineOptions: this.getPolylineOptions(this.props.activeQuality)
+      polylineOptions: getPolylineOptions(this.props.activeQuality, 0)
     };
     this.drawingManager = new window.google.maps.drawing.DrawingManager(drawingOptions);
     this.drawingManager.setMap(this.map);
 
     window.google.maps.event.addListener(this.drawingManager, 'polylinecomplete', this.onPolylineCreated);
-  }
-
-  getPolylineOptions(quality) {
-    return {
-      strokeColor: PathQuality[quality].color,
-    }
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -67,19 +60,17 @@ export default class Map extends Component {
 
     if (prevProps.activeQuality !== this.props.activeQuality) {
       this.drawingManager.setOptions({
-        polylineOptions: this.getPolylineOptions(this.props.activeQuality),
+        polylineOptions: getPolylineOptions(this.props.activeQuality, 0),
       });
     }
   }
 
   drawPath(path) {
     const latLngs = path.points.map(point => new window.google.maps.LatLng(...point));
-    const quality = PathQuality[path.quality];
-    const drawOptions = {
-      strokeColor: quality !== undefined ? quality.color : '#CC0000',
-      strokeOpacity: 1.0,
-      strokeWeight: 2,
-    };
+
+    const age = (new Date() - new Date(path.created));
+
+    const drawOptions = getPolylineOptions(this.props.activeQuality, age);
     const prerenderedPolyline = new window.google.maps.Polyline({ ...drawOptions, path: latLngs });
     prerenderedPolyline.setMap(this.map);
 
@@ -109,6 +100,7 @@ export default class Map extends Component {
       id: this.nextPolylineId,
       points,
       quality: this.props.activeQuality,
+      created: (new Date()).toISOString(),
     };
 
     this.polylines[path.id] = {
@@ -127,3 +119,27 @@ export default class Map extends Component {
   }
 }
 
+
+function getOpacityForAge(milliseconds) {
+  const days = milliseconds / millisecondsInDay;
+  const period = 30;
+  const maxPeriod = period * 4;
+
+  return lerp(0.2, 1, 1 - period / maxPeriod);
+}
+
+function lerp(min, max, ratio) {
+  const range = (max - min);
+
+  return min + ratio * range;
+}
+
+function getPolylineOptions(qualityID, age) {
+  const quality = PathQuality[qualityID];
+
+  return {
+    strokeOpacity: getOpacityForAge(age),
+    strokeColor: quality !== undefined ? quality.color : '#CC0000',
+    strokeWeight: 5,
+  }
+}

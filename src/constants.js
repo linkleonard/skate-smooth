@@ -7,3 +7,5 @@ export const PathQuality = _.keyBy([
   {id: 3, color: '#f2b35c'},
   {id: 4, color: '#f2665c'},
 ], 'id');
+
+export const millisecondsInDay = 1000 * 60 * 60 * 24;
