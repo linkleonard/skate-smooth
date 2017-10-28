@@ -123,9 +123,9 @@ export default class Map extends Component {
 function getOpacityForAge(milliseconds) {
   const days = milliseconds / millisecondsInDay;
   const period = 30;
-  const maxPeriod = period * 4;
+  const maxPeriods = 4;
 
-  return lerp(0.2, 1, 1 - period / maxPeriod);
+  return lerp(0.2, 1, 1 - days / period / maxPeriods);
 }
 
 function lerp(min, max, ratio) {
