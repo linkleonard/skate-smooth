@@ -2,31 +2,26 @@ import React, { Component } from 'react';
 
 
 export default class Map extends Component {
+  constructor(props) {
+    super(props);
+
+    this.drawPath = this.drawPath.bind(this);
+    this.onPolylineCreated = this.onPolylineCreated.bind(this);
+
+    this.polylines = {};
+    this.map = null;
+    this.nextPolylineId = 0;
+  }
+
   componentDidMount() {
+    const { paths } = this.props;
+
     const center = {lat: 40.720392, lng: -73.879629};
     const mapConfig = {zoom: 15, center};
-    const map = new window.google.maps.Map(this.container, mapConfig);
+    this.map = new window.google.maps.Map(this.container, mapConfig);
 
-    let savedPaths;
-
-    try {
-      savedPaths = JSON.parse(localStorage.getItem('paths'));
-      if (savedPaths === null) {
-        savedPaths = [];
-      }
-    } catch (exception) {
-      savedPaths = [];
-    }
-
-    savedPaths.forEach(path => {
-      const latLngs = path.map(point => new window.google.maps.LatLng(point));
-      const drawOptions = {
-        strokeColor: '#CC0000',
-        strokeOpacity: 1.0,
-        strokeWeight: 2,
-      };
-      const prerenderedPolyline = new window.google.maps.Polyline({ ...drawOptions, path: latLngs });
-      prerenderedPolyline.setMap(map);
+    paths.forEach(path => {
+      this.polylines[path.id] = this.drawPath(path);
     });
 
     const drawingOptions = {
@@ -37,15 +32,42 @@ export default class Map extends Component {
       },
     };
     const drawingManager = new window.google.maps.drawing.DrawingManager(drawingOptions);
-    drawingManager.setMap(map);
+    drawingManager.setMap(this.map);
 
-    window.google.maps.event.addListener(drawingManager, 'polylinecomplete', (polyline) => {
-      const path = [];
-      polyline.getPath().forEach((point => path.push(point.toJSON())));
-      savedPaths.push(path);
+    window.google.maps.event.addListener(drawingManager, 'polylinecomplete', this.onPolylineCreated);
+  }
 
-      localStorage.setItem('paths', JSON.stringify(savedPaths));
+  componentDidUpdate(prevProps, prevState) {
+    this.props.paths.forEach(path => {
+      if (this.polylines[path.id] === undefined) {
+        this.polylines[path.id] = this.drawPath(path);
+      }
     })
+  }
+
+  drawPath(path) {
+    const latLngs = path.points.map(point => new window.google.maps.LatLng(...point));
+      const drawOptions = {
+        strokeColor: '#CC0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+      };
+      const prerenderedPolyline = new window.google.maps.Polyline({ ...drawOptions, path: latLngs });
+      prerenderedPolyline.setMap(this.map);
+  }
+
+  onPolylineCreated(polyline) {
+    const points = [];
+    polyline.getPath().forEach(point => points.push([point.lat(), point.lng()]));
+
+    const path = {
+      id: this.nextPolylineId,
+      points,
+    };
+    this.polylines[path.id] = polyline;
+
+    ++this.nextPolylineId;
+    this.props.onPathCreated(path);
   }
 
   render() {
